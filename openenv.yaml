@@ -1,0 +1,37 @@
+name: AgentForge
+version: 1.1.0
+description: Customer Support RL Environment for training AI agents on multi-step reasoning tasks
+author: Prasanna Nandeti
+
+entry_point: app:app
+runtime: python3.10
+
+observation_space:
+user_query: string
+conversation_history: list
+current_step: int
+task_context: dict
+internal_tools_output: string | null
+
+action_space:
+reply:
+text: string
+ask_info:
+field: string
+call_tool:
+tool_name: string
+tool_params: dict
+close_ticket: {}
+
+tasks:
+
+* id: easy_1
+  difficulty: easy
+* id: medium_1
+  difficulty: medium
+* id: hard_1
+  difficulty: hard
+
+environment:
+max_steps: 8
+deterministic: true
