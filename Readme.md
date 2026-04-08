@@ -135,6 +135,14 @@ Sample Execution Output
 [STEP] step=3 action=close_ticket reward=0.85 done=true error=null
 [END] success=true steps=3 rewards=0.25,0.10,0.85
 
+## 📈 Reward Progression
+
+The graph below shows reward progression across tasks, demonstrating effective reward shaping and structured agent behavior.
+
+<img width="567" height="455" alt="image" src="https://github.com/user-attachments/assets/ef4123af-46ce-4d24-9574-19e418a41267" />
+
+
+
 Deployment
 
 * FastAPI backend
