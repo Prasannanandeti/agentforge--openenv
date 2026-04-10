@@ -55,7 +55,6 @@ AgentForge solves this by providing:
 * `task_context` — hidden metadata
 * `internal_tools_output` — tool results
 
-
 ##  Reward System (Key Highlight)
 
 AgentForge uses **multi-signal reward shaping**:
