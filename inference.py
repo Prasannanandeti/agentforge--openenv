@@ -1,5 +1,5 @@
 import os
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Body
 from openai import OpenAI
 from env.environment import AgentForgeEnv
 from env.models import Action
@@ -19,40 +19,49 @@ HF_TOKEN = os.getenv("HF_TOKEN")
 
 client = OpenAI(base_url=API_BASE_URL, api_key=HF_TOKEN)
 
-
+# -------------------------
+# HEALTH CHECK
+# -------------------------
 @app.get("/")
 def home():
     return {"status": "running"}
 
 # -------------------------
-# RESET (IMPORTANT)
+# RESET (FINAL SAFE VERSION)
 # -------------------------
 @app.post("/reset")
-def reset(task_id: str = "easy_1"):
+def reset(payload: dict = Body(default=None)):
     try:
+        if payload is None:
+            task_id = "easy_1"
+        else:
+            task_id = payload.get("task_id", "easy_1")
+
         obs = env.reset(task_id)
         return obs.model_dump()
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 # -------------------------
-# STEP (IMPORTANT)
+# STEP (FINAL SAFE VERSION)
 # -------------------------
 @app.post("/step")
-def step(action: Action):
+def step(action: dict):
     try:
-        obs, reward, done, info = env.step(action)
+        act = Action(**action)
+        obs, reward, done, info = env.step(act)
+
         return {
             "observation": obs.model_dump(),
-            "reward": reward.model_dump(),
+            "reward": reward.value,
             "done": done,
             "info": info
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e))
 
 # -------------------------
-# STATE
+# STATE (OPTIONAL)
 # -------------------------
 @app.get("/state")
 def state():
@@ -61,6 +70,9 @@ def state():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+# -------------------------
+# OPTIONAL: INFERENCE LOGIC
+# -------------------------
 def run_inference():
     task_ids = ["easy_1", "medium_1", "hard_1"]
 
@@ -94,50 +106,8 @@ def run_inference():
                     elif step_idx == 2:
                         action = Action(
                             action_type="reply",
-                            text=f"Your order {order_id} has been shipped and will arrive on 2023-10-25."
+                            text=f"Your order {order_id} has been shipped."
                         )
-                    else:
-                        action = Action(action_type="close_ticket")
-
-                elif tid == "medium_1":
-                    if step_idx == 1:
-                        action = Action(
-                            action_type="call_tool",
-                            tool_name="get_order_details",
-                            tool_params={"order_id": order_id}
-                        )
-                    elif step_idx == 2:
-                        action = Action(
-                            action_type="call_tool",
-                            tool_name="process_refund",
-                            tool_params={"order_id": order_id}
-                        )
-                    elif step_idx == 3:
-                        action = Action(
-                            action_type="reply",
-                            text=f"I have successfully processed your refund for {order_id}."
-                        )
-                    else:
-                        action = Action(action_type="close_ticket")
-
-                elif tid == "hard_1":
-                    if step_idx == 1:
-                        action = Action(action_type="ask_info", field="order_id")
-
-                    elif step_idx == 2:
-                        order_id = "ORD-303"
-                        action = Action(
-                            action_type="call_tool",
-                            tool_name="get_order_details",
-                            tool_params={"order_id": order_id}
-                        )
-
-                    elif step_idx == 3:
-                        action = Action(
-                            action_type="reply",
-                            text="Sorry, refund not possible as order is still processing."
-                        )
-
                     else:
                         action = Action(action_type="close_ticket")
 
@@ -145,9 +115,6 @@ def run_inference():
 
                 r_val = reward_obj.value
                 rewards.append(r_val)
-
-                if done and info.get("score", 0) >= 0.7:
-                    success = "true"
 
                 print(
                     f"[STEP] step={step_idx} action={action.action_type} "
