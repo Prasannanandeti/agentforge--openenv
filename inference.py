@@ -27,7 +27,7 @@ def home():
     return {"status": "running"}
 
 # -------------------------
-# RESET ENDPOINT (CRITICAL)
+# RESET ENDPOINT (POST)
 # -------------------------
 @app.post("/reset")
 def reset(payload: dict = Body(default={"task_id": "easy_1"})):
@@ -39,7 +39,14 @@ def reset(payload: dict = Body(default={"task_id": "easy_1"})):
         raise HTTPException(status_code=400, detail=str(e))
 
 # -------------------------
-# STEP ENDPOINT (CRITICAL)
+# RESET ENDPOINT (GET FIX)
+# -------------------------
+@app.get("/reset")
+def reset_get():
+    return {"message": "Use POST /reset"}
+
+# -------------------------
+# STEP ENDPOINT (POST)
 # -------------------------
 @app.post("/step")
 def step(action: dict):
@@ -57,7 +64,14 @@ def step(action: dict):
         raise HTTPException(status_code=400, detail=str(e))
 
 # -------------------------
-# OPTIONAL: YOUR ORIGINAL LOGIC (NOT USED BY OPENENV)
+# STEP ENDPOINT (GET FIX)
+# -------------------------
+@app.get("/step")
+def step_get():
+    return {"message": "Use POST /step"}
+
+# -------------------------
+# OPTIONAL: YOUR ORIGINAL LOGIC
 # -------------------------
 def run_inference():
     task_ids = ["easy_1", "medium_1", "hard_1"]
@@ -75,7 +89,6 @@ def run_inference():
             step_idx += 1
 
             try:
-                # SAFE API CALL
                 try:
                     _ = client.models.list()
                 except Exception:
@@ -148,7 +161,7 @@ def run_inference():
 
 
 # -------------------------
-# RUN SERVER (IMPORTANT)
+# RUN SERVER
 # -------------------------
 if __name__ == "__main__":
     import uvicorn
