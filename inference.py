@@ -1,11 +1,11 @@
 import os
-from fastapi import FastAPI, HTTPException, Body
+from fastapi import FastAPI, HTTPException
 from openai import OpenAI
 from env.environment import AgentForgeEnv
 from env.models import Action
 
 # -------------------------
-# INIT APP
+# INIT
 # -------------------------
 app = FastAPI()
 env = AgentForgeEnv()
@@ -19,60 +19,48 @@ HF_TOKEN = os.getenv("HF_TOKEN")
 
 client = OpenAI(base_url=API_BASE_URL, api_key=HF_TOKEN)
 
-# -------------------------
-# HEALTH CHECK
-# -------------------------
+
 @app.get("/")
 def home():
     return {"status": "running"}
 
 # -------------------------
-# RESET (POST)
+# RESET (IMPORTANT)
 # -------------------------
 @app.post("/reset")
-def reset(payload: dict = Body(default={"task_id": "easy_1"})):
+def reset(task_id: str = "easy_1"):
     try:
-        task_id = payload.get("task_id", "easy_1")
         obs = env.reset(task_id)
         return obs.model_dump()
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 # -------------------------
-# RESET (GET FIX)
-# -------------------------
-@app.get("/reset")
-def reset_get():
-    return {"message": "Use POST /reset"}
-
-# -------------------------
-# STEP (POST)
+# STEP (IMPORTANT)
 # -------------------------
 @app.post("/step")
-def step(action: dict):
+def step(action: Action):
     try:
-        act = Action(**action)
-        obs, reward, done, info = env.step(act)
-
+        obs, reward, done, info = env.step(action)
         return {
             "observation": obs.model_dump(),
-            "reward": reward.value,
+            "reward": reward.model_dump(),
             "done": done,
             "info": info
         }
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e))
 
 # -------------------------
-# STEP (GET FIX)
+# STATE
 # -------------------------
-@app.get("/step")
-def step_get():
-    return {"message": "Use POST /step"}
+@app.get("/state")
+def state():
+    try:
+        return env.state()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-# -------------------------
-# RUN INFERENCE (STRICT LOG FORMAT)
-# -------------------------
 def run_inference():
     task_ids = ["easy_1", "medium_1", "hard_1"]
 
@@ -175,11 +163,3 @@ def run_inference():
 
         rewards_str = ",".join([f"{r:.2f}" for r in rewards])
         print(f"[END] success={success} steps={step_idx} rewards={rewards_str}")
-
-
-# -------------------------
-# RUN SERVER
-# -------------------------
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
