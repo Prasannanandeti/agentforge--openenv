@@ -11,7 +11,7 @@ app = FastAPI()
 env = AgentForgeEnv()
 
 # -------------------------
-# OPTIONAL (MODEL CLIENT)
+# ENV VARIABLES
 # -------------------------
 API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
 MODEL_NAME = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
@@ -27,7 +27,7 @@ def home():
     return {"status": "running"}
 
 # -------------------------
-# RESET ENDPOINT (POST)
+# RESET (POST)
 # -------------------------
 @app.post("/reset")
 def reset(payload: dict = Body(default={"task_id": "easy_1"})):
@@ -39,14 +39,14 @@ def reset(payload: dict = Body(default={"task_id": "easy_1"})):
         raise HTTPException(status_code=400, detail=str(e))
 
 # -------------------------
-# RESET ENDPOINT (GET FIX)
+# RESET (GET FIX)
 # -------------------------
 @app.get("/reset")
 def reset_get():
     return {"message": "Use POST /reset"}
 
 # -------------------------
-# STEP ENDPOINT (POST)
+# STEP (POST)
 # -------------------------
 @app.post("/step")
 def step(action: dict):
@@ -64,24 +64,26 @@ def step(action: dict):
         raise HTTPException(status_code=400, detail=str(e))
 
 # -------------------------
-# STEP ENDPOINT (GET FIX)
+# STEP (GET FIX)
 # -------------------------
 @app.get("/step")
 def step_get():
     return {"message": "Use POST /step"}
 
 # -------------------------
-# OPTIONAL: YOUR ORIGINAL LOGIC
+# RUN INFERENCE (STRICT LOG FORMAT)
 # -------------------------
 def run_inference():
     task_ids = ["easy_1", "medium_1", "hard_1"]
 
     for tid in task_ids:
-        print(f"[START] task={tid}")
+        print(f"[START] task={tid} env=agentforge model={MODEL_NAME}")
 
         obs = env.reset(tid)
         done = False
         step_idx = 0
+        rewards = []
+        success = "false"
 
         order_id = obs.task_context.get("order_id")
 
@@ -153,11 +155,26 @@ def run_inference():
 
                 obs, reward_obj, done, info = env.step(action)
 
-                print(f"[STEP] {step_idx} | {action.action_type} | reward={reward_obj.value}")
+                r_val = reward_obj.value
+                rewards.append(r_val)
+
+                if done and info.get("score", 0) >= 0.7:
+                    success = "true"
+
+                print(
+                    f"[STEP] step={step_idx} action={action.action_type} "
+                    f"reward={r_val:.2f} done={str(done).lower()} error=null"
+                )
 
             except Exception as e:
-                print(f"[ERROR] {str(e)}")
-                break
+                print(
+                    f"[STEP] step={step_idx} action=error "
+                    f"reward=0.00 done=true error={str(e)}"
+                )
+                done = True
+
+        rewards_str = ",".join([f"{r:.2f}" for r in rewards])
+        print(f"[END] success={success} steps={step_idx} rewards={rewards_str}")
 
 
 # -------------------------
